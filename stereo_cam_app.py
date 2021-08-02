@@ -5,10 +5,12 @@ import sys
 from typing import NamedTuple
 import os.path
 
+
 # Basic data structure to keep both images from a stereo capture
 class StereoImg(NamedTuple):
     left_img: np.ndarray
     right_img: np.ndarray
+
 
 # Get the StereoImg using the path passed as parameters
 def get_stereo_img(argv, img_type):
@@ -50,24 +52,56 @@ def get_stereo_img(argv, img_type):
     return images
 
 
-def main(argv):
-    # If the number of parameters is > 2, exit the process
-    if len(argv) > 2 or len(argv) == 0:
-        print("The number of arguments should be either 1 or 2, please refer to the README.md for more information about the execution of this program.")
-        sys.exit()
+# Calibrates the images using the calibration data. The data can be found in the README
+def calibrate_stereo_cam():
+    print("No yet implemented")
+    # Returns an updated StereoImg
 
-    # Get the images from the path passed as parametersf
-    # Since we want to match the stereo capture, we are setting the capture type to greyscale. It can be modified by changing the second parameter of the function
-    stereo_img = get_stereo_img(argv, 0)
 
+# Do the matching between the images
+def image_matching():
+    print("No yet implemented")
+    # Returns a 2D matrix with the depth for each pixel
+
+
+# Fill a 2D matrix with the coordinates of each pixel. The method should return the error coefficient found between
+# the two images and a way to see the data (either by creating an image using the coordinates or by printing some
+# kind of graph)
+def depth_rendering():
+    print("No yet implemented")
+    # Returns a 2D matrix with the coordinates of each pixel in the scene
+
+
+# Debugging method used to show the content of a StereoImg
+def debug_print_lr(stereo_img):
     # That's only there for debugging purpose, it shows the image read from the files
     cv2.imshow('left', stereo_img.left_img)
     cv2.imshow('right', stereo_img.right_img)
-
-
     # Stop the program until we press a key and then closes every window that has been opened
     cv2.waitKey(0)
     cv2.destroyAllWindows()
+
+
+# Main method, everything starts and ends here!
+def main(argv):
+    # If the number of parameters is > 2, exit the process
+    if len(argv) > 2 or len(argv) == 0:
+        print("The number of arguments should be either 1 or 2, please refer to the README.md for more information "
+              "about the execution of this program.")
+        sys.exit()
+
+    # Get the images from the path passed as parameters Since we want to match the stereo capture, we are setting the
+    # capture type to greyscale. It can be modified by changing the second parameter of the function
+    stereo_img = get_stereo_img(argv, 0)
+
+    # Debugging method used to print both left and right images
+    debug_print_lr(stereo_img)
+
+    # To implement...
+    calibrate_stereo_cam()
+    image_matching()
+    depth_rendering()
+
 
 if __name__ == "__main__":
     main(sys.argv[1:])
