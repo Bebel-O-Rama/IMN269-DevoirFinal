@@ -54,10 +54,12 @@ def get_stereo_img(argv, img_type):
 
 # Calibrates the images using the calibration data. The data can be found in the README
 def calibrate_stereo_cam():
+    
     ################ FIND CHESSBOARD CORNERS - OBJECT POINTS AND IMAGE POINTS #############################
     chessboardSize = (9,7)
     frameSize = (640,480)
-    
+
+
     # termination criteria
     criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
 
@@ -67,21 +69,20 @@ def calibrate_stereo_cam():
     objp[:,:2] = np.mgrid[0:chessboardSize[0],0:chessboardSize[1]].T.reshape(-1,2)
 
     objp = objp * 20
-    print(objp)
+    #print(objp)
 
     # Arrays to store object points and image points from all the images.
     objpoints = [] # 3d point in real world space
     imgpointsL = [] # 2d points in image plane.
     imgpointsR = [] # 2d points in image plane.
 
-
     for i in range(1,4):
         path=['Img/Calibration/mire'+str(i)+'.jpg']
-        images1=get_stereo_img(path,0)
-        cv2.imwrite('Img/Calibration/stereoLeft/mire'+str(i)+'.jpg', images1[0])
-        cv2.imwrite('Img/Calibration/stereoRight/mire'+str(i)+'.jpg', images1[1])
+        image=get_stereo_img(path,0)
+        cv2.imwrite('Img/Calibration/stereoLeft/mire'+str(i)+'.jpg', image[0])
+        cv2.imwrite('Img/Calibration/stereoRight/mire'+str(i)+'.jpg', image[1])
 
-    imagesLeft = glob.glob('Img/Calibration/stereoLeft/*.JPG')
+    c = glob.glob('Img/Calibration/stereoLeft/*.JPG')
     imagesRight = glob.glob('Img/Calibration/stereoRight/*.JPG')
 
     for imgLeft, imgRight in zip(imagesLeft, imagesRight):
@@ -155,26 +156,25 @@ def calibrate_stereo_cam():
     stereoMapR = cv2.initUndistortRectifyMap(newCameraMatrixR, distR, rectR, projMatrixR, grayR.shape[::-1], cv2.CV_16SC2)
 
     print("Saving parameters!")
-    cv2_file = cv2.FileStorage('stereoMap.xml', cv2.FILE_STORAGE_WRITE)
+    x=1
+    for imgLeft, imgRight in zip(imagesLeft, imagesRight):
 
-    cv2_file.write('stereoMapL_x',stereoMapL[0])
-    cv2_file.write('stereoMapL_y',stereoMapL[1])
-    cv2_file.write('stereoMapR_x',stereoMapR[0])
-    cv2_file.write('stereoMapR_y',stereoMapR[1])
+        imgL = cv2.imread(imgLeft)
+        imgR = cv2.imread(imgRight)
+        dstL = cv2.undistort(imgL, newCameraMatrixL, distL, None, None)
+        dstR = cv2.undistort(imgL, newCameraMatrixL, distL, None, None)
+        cv2.imwrite('Img/ImgRectL/undistL'+str(x)+'.jpg', dstL)
+        cv2.imwrite('Img/ImgRectR/undistR'+str(x)+'.jpg', dstR)
+        x=x+1
 
-    cv2_file.release()
-
-
-    # Camera parameters to undistort and rectify images
-    cv_file = cv2.FileStorage()
-    cv_file.open('stereoMap.xml', cv2.FileStorage_READ)
-
-    stereoMapL_x = cv_file.getNode('stereoMapL_x').mat()
-    stereoMapL_y = cv_file.getNode('stereoMapL_y').mat()
-    stereoMapR_x = cv_file.getNode('stereoMapR_x').mat()
-    stereoMapR_y = cv_file.getNode('stereoMapR_y').mat()
-
-    print("No yet implemented")
+    print("Camera matrix : \n")
+    print(newCameraMatrixL)
+    print("dist : \n")
+    print(distL)
+    print("rvecs : \n")
+    print(rectL)
+    print("tvecs : \n")
+    print(projMatrixL)
     # Returns an updated StereoImg
 
 
