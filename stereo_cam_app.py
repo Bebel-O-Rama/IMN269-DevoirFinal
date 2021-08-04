@@ -156,9 +156,16 @@ def calibrate_stereo_cam():
     stereoMapR = cv2.initUndistortRectifyMap(newCameraMatrixR, distR, rectR, projMatrixR, grayR.shape[::-1], cv2.CV_16SC2)
 
     print("Saving parameters!")
-    x=1
-    for imgLeft, imgRight in zip(imagesLeft, imagesRight):
+    for i in range(1,6):
+        path=['Img/img'+str(i)+'.jpg']
+        image=get_stereo_img(path,0)
+        cv2.imwrite('Img/ImgL/img'+str(i)+'.jpg', image[0])
+        cv2.imwrite('Img/ImgR/img'+str(i)+'.jpg', image[1])
 
+    imagsRight = glob.glob('Img/ImgR/*.JPG')
+    imagsLeft = glob.glob('Img/ImgL/*.JPG')
+    x=1
+    for imgLeft, imgRight in zip(imagsLeft, imagsRight):
         imgL = cv2.imread(imgLeft)
         imgR = cv2.imread(imgRight)
         dstL = cv2.undistort(imgL, newCameraMatrixL, distL, None, None)
