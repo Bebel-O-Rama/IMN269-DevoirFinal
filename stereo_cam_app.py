@@ -81,9 +81,9 @@ def calibrate_stereo_cam():
         image=get_stereo_img(path,0)
         cv2.imwrite('Img/Calibration/stereoLeft/mire'+str(i)+'.jpg', image[0])
         cv2.imwrite('Img/Calibration/stereoRight/mire'+str(i)+'.jpg', image[1])
-
-    c = glob.glob('Img/Calibration/stereoLeft/*.JPG')
+    
     imagesRight = glob.glob('Img/Calibration/stereoRight/*.JPG')
+    imagesLeft = glob.glob('Img/Calibration/stereoLeft/*.JPG')
 
     for imgLeft, imgRight in zip(imagesLeft, imagesRight):
 
