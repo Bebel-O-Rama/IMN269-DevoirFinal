@@ -59,9 +59,18 @@ def calibrate_stereo_cam():
 
 
 # Do the matching between the images
-def image_matching():
+def image_matching(stereo_img):
     print("No yet implemented")
-    # Returns a 2D matrix with the depth for each pixel
+    #
+    # stereo = cv2.StereoBM_create(numDisparities=16, blockSize=5)
+    # disparity = stereo.compute(stereo_img.left_img, stereo_img.right_img)
+    #
+    # cv2.imshow('disparity', disparity)
+    # cv2.waitKey(0)
+    # cv2.destroyAllWindows()
+
+
+    # Returns a 2D matrix with the disparities for each pixel
 
 
 # Fill a 2D matrix with the coordinates of each pixel. The method should return the error coefficient found between
@@ -99,7 +108,11 @@ def main(argv):
 
     # To implement...
     calibrate_stereo_cam()
-    image_matching()
+
+    # # Proceeds to the matching of the left and right images and returns a 2D matrix with the disparity for each pixels
+    # image_matching(stereo_img)
+
+    # To implement...
     depth_rendering()
 
 
