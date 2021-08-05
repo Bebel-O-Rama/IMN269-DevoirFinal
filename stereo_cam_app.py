@@ -159,7 +159,7 @@ def calibrate_stereo_cam(argv, img_type):
     imgL=img[0]
     imgR=img[1]
     dstL = cv2.undistort(imgL, newCameraMatrixL, distL, None, None)
-    dstR = cv2.undistort(imgL, newCameraMatrixL, distL, None, None)
+    dstR = cv2.undistort(imgR, newCameraMatrixR, distR, None, None)
     cv2.imwrite('Img/ImgRectL/undistL.jpg', dstL)
     cv2.imwrite('Img/ImgRectR/undistR.jpg', dstR) 
 
