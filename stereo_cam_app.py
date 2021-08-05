@@ -53,7 +53,7 @@ def get_stereo_img(argv, img_type):
 
 
 # Calibrates the images using the calibration data. The data can be found in the README
-def calibrate_stereo_cam():
+def calibrate_stereo_cam(argv, img_type):
     
     ################ FIND CHESSBOARD CORNERS - OBJECT POINTS AND IMAGE POINTS #############################
     chessboardSize = (9,7)
@@ -154,26 +154,16 @@ def calibrate_stereo_cam():
 
     stereoMapL = cv2.initUndistortRectifyMap(newCameraMatrixL, distL, rectL, projMatrixL, grayL.shape[::-1], cv2.CV_16SC2)
     stereoMapR = cv2.initUndistortRectifyMap(newCameraMatrixR, distR, rectR, projMatrixR, grayR.shape[::-1], cv2.CV_16SC2)
+    
+    img=get_stereo_img(argv, img_type)
+    imgL=img[0]
+    imgR=img[1]
+    dstL = cv2.undistort(imgL, newCameraMatrixL, distL, None, None)
+    dstR = cv2.undistort(imgL, newCameraMatrixL, distL, None, None)
+    cv2.imwrite('Img/ImgRectL/undistL.jpg', dstL)
+    cv2.imwrite('Img/ImgRectR/undistR.jpg', dstR) 
 
-    print("Saving parameters!")
-    for i in range(1,6):
-        path=['Img/img'+str(i)+'.jpg']
-        image=get_stereo_img(path,0)
-        cv2.imwrite('Img/ImgL/img'+str(i)+'.jpg', image[0])
-        cv2.imwrite('Img/ImgR/img'+str(i)+'.jpg', image[1])
-
-    imagsRight = glob.glob('Img/ImgR/*.JPG')
-    imagsLeft = glob.glob('Img/ImgL/*.JPG')
-    x=1
-    for imgLeft, imgRight in zip(imagsLeft, imagsRight):
-        imgL = cv2.imread(imgLeft)
-        imgR = cv2.imread(imgRight)
-        dstL = cv2.undistort(imgL, newCameraMatrixL, distL, None, None)
-        dstR = cv2.undistort(imgL, newCameraMatrixL, distL, None, None)
-        cv2.imwrite('Img/ImgRectL/undistL'+str(x)+'.jpg', dstL)
-        cv2.imwrite('Img/ImgRectR/undistR'+str(x)+'.jpg', dstR)
-        x=x+1
-
+    print("Printing the new parameters!")
     print("Camera matrix : \n")
     print(newCameraMatrixL)
     print("dist : \n")
@@ -182,6 +172,9 @@ def calibrate_stereo_cam():
     print(rectL)
     print("tvecs : \n")
     print(projMatrixL)
+    
+    dst = StereoImg(dstL, dstR)
+    return dst
     # Returns an updated StereoImg
 
 
