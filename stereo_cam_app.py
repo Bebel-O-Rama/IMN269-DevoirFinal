@@ -227,7 +227,10 @@ def main(argv):
     debug_print_lr(stereo_img)
 
     # To implement...
-    calibrate_stereo_cam(['Img/nico1.jpg'],0)
+    stereo_img_rect = calibrate_stereo_cam(argv,0)
+    
+    # Debugging method used to print both left and right images rectified
+    debug_print_lr(stereo_img_rect)
 
     # # Proceeds to the matching of the left and right images and returns a 2D matrix with the disparity for each pixels
     # image_matching(stereo_img)
