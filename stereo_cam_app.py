@@ -2,6 +2,7 @@
 import cv2
 import numpy as np
 import sys
+from matplotlib import pyplot as plt
 from typing import NamedTuple
 import os.path
 
@@ -184,12 +185,18 @@ def calibrate_stereo_cam(stereo_img, is_debugging):
         cv2.imshow('right img ', calibrated_img.right_img)
         cv2.waitKey(0)
 
-    return calibrated_img
+    return Q, calibrated_img
 
 
 # Do the matching between the images
 def image_matching(stereo_img):
-    print("No yet implemented")
+
+    stereo = cv2.StereoBM_create(numDisparities=0, blockSize=7)
+    disparity = stereo.compute(stereo_img.left_img, stereo_img.right_img)
+    # norm = cv2.normalize(disparity, None, alpha = 0, beta = 1, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_32F)
+    plt.imshow(disparity, 'gray')
+    plt.show()
+
     #
     # stereo = cv2.StereoBM_create(numDisparities=16, blockSize=5)
     # disparity = stereo.compute(stereo_img.left_img, stereo_img.right_img)
@@ -235,23 +242,24 @@ def main(argv):
     stereo_img = get_stereo_img(argv)
 
     # Debugging method used to print both left and right images.
-    debug_print_lr(stereo_img)
+    # debug_print_lr(stereo_img)
 
     # Calibrate the images using the mire found in the folder Img/Calibration/.
     # The second parameter is a bool to determine if the process shows the corner of the chessboard pattern or not
+    # Returns the calibrated images and the Q matrix for the 3D rendering
     print("----------------------------------")
     print("Calibrating the images")
     print("----------------------------------")
-    stereo_img_rect = calibrate_stereo_cam(stereo_img, False)
+    stereo_img_rect, Q = calibrate_stereo_cam(stereo_img, False)
 
     # Debugging method used to print both left and right images rectified
-    debug_print_lr(stereo_img_rect)
+    # debug_print_lr(stereo_img_rect)
 
     # Proceeds to the matching of the left and right images and returns a 2D matrix with the disparity for each pixels
     print("----------------------------------")
     print("Matching both images to get a disparity map")
     print("----------------------------------")
-    image_matching(stereo_img)
+    # image_matching(stereo_img)
 
     # To implement...
     print("----------------------------------")
