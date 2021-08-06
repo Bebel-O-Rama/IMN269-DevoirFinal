@@ -294,6 +294,10 @@ def main(argv):
     print("----------------------------------")
     disparity_map = image_matching(stereo_img_rect)
 
+    # Shows the disparity map returned from the method 'image_matching'
+    cv2.imshow('disparity_map', disparity_map)
+    cv2.waitKey(0)
+
     # To implement...
     print("----------------------------------")
     print("Creating a 3D render of the stereo capture")
