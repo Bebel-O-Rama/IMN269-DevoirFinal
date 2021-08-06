@@ -241,11 +241,55 @@ def image_matching(stereo_img_rect):
     return disparity_SGBM
 
 # Fill a 2D matrix with the coordinates of each pixel. The method should return the error coefficient found between
-# the two images and a way to see the data (either by creating an image using the coordinates or by printing some
-# kind of graph)
-def depth_rendering():
-    print("No yet implemented")
-    # Returns a 2D matrix with the coordinates of each pixel in the scene
+# the two images and a way to see the data (by creating a 3D file named Reconstructed that can be ploted later)
+def depth_rendering(stereo_img_rect, Q2, disparity_map):
+    
+    #Generate  point cloud. 
+    print ("\nGenerating the 3D map...")
+    
+    #Get new downsampled width and height 
+    h,w = stereo_img_rect[0].shape[:2]
+
+    #Reproject points into 3D
+    points_3D = cv2.reprojectImageTo3D(disparity_map, Q2)
+    
+    #Get color points
+    colors = cv2.cvtColor(stereo_img_rect[0], cv2.COLOR_BGR2RGB)
+    
+    #Get rid of points with value 0 (i.e no depth)
+    mask_map = disparity_map > disparity_map.min()
+    
+    #Mask colors and points. 
+    output_points = points_3D[mask_map]
+    output_colors = colors[mask_map]
+    
+    #Define name for output file
+    output_file = 'Reconstructed.ply'
+    
+    #Generate point cloud 
+    print ("\n Creating the output file... \n")
+    #create_output(output_points, output_colors, output_file)
+    output_colors = output_colors.reshape(-1,3)
+    output_points = np.hstack([output_points.reshape(-1,3),output_colors])
+
+    ply_header = '''ply
+        format ascii 1.0
+        element vertex %(vert_num)d
+        property float x
+        property float y
+        property float z
+        property uchar red
+        property uchar green
+        property uchar blue
+        end_header
+        '''
+    with open(output_file, 'w') as f:
+        f.write(ply_header %dict(vert_num=len(output_points)))
+        np.savetxt(f,output_points,'%f %f %f %d %d %d')
+    
+    
+    print("File 3D Created: Reconstructed")
+    #Creat a 3D file named Reconstructed that can be ploted later
 
 
 # Debugging method used to show the content of a StereoImg
@@ -302,7 +346,7 @@ def main(argv):
     print("----------------------------------")
     print("Creating a 3D render of the stereo capture")
     print("----------------------------------")
-    depth_rendering()
+    depth_rendering(stereo_img_rect, Q, disparity_map)
 
 
 if __name__ == "__main__":
