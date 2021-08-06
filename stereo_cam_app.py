@@ -185,17 +185,51 @@ def calibrate_stereo_cam(stereo_img, is_debugging):
         cv2.imshow('right img ', calibrated_img.right_img)
         cv2.waitKey(0)
 
-    return Q, calibrated_img
+    return calibrated_img, Q
 
 
 # Do the matching between the images
-def image_matching(stereo_img):
+def image_matching(stereo_img_rect):
 
-    stereo = cv2.StereoBM_create(numDisparities=0, blockSize=7)
-    disparity = stereo.compute(stereo_img.left_img, stereo_img.right_img)
-    # norm = cv2.normalize(disparity, None, alpha = 0, beta = 1, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_32F)
-    plt.imshow(disparity, 'gray')
-    plt.show()
+
+    # ALLER VOIR ÇA : http: // amroamroamro.github.io / mexopencv / opencv_contrib / disparity_filtering_demo.html
+
+    block_size = 3
+    min_disp = 50
+    max_disp = 300
+    num_disp = max_disp - min_disp
+    uniquenessRatio = 5
+    speckleWindowSize = 50
+    speckleRange = 2
+    disp12MaxDiff = 0
+
+    stereo = cv2.StereoSGBM_create(
+        minDisparity=min_disp,
+        numDisparities=num_disp,
+        blockSize=block_size,
+        uniquenessRatio=uniquenessRatio,
+        speckleWindowSize=speckleWindowSize,
+        speckleRange=speckleRange,
+        disp12MaxDiff=disp12MaxDiff,
+        P1=8 * 1 * block_size * block_size,
+        P2=32 * 1 * block_size * block_size,
+        # P1=20,
+        # P2=100,
+    )
+
+    disparity_SGBM = stereo.compute(stereo_img_rect.left_img, stereo_img_rect.right_img)
+
+    disparity_SGBM = cv2.normalize(disparity_SGBM, disparity_SGBM, alpha=255,
+                                  beta=0, norm_type=cv2.NORM_MINMAX)
+    disparity_SGBM = np.uint8(disparity_SGBM)
+    cv2.imshow("Disparity", disparity_SGBM)
+    cv2.waitKey(0)
+    cv2.imwrite("disparity_SGBM_norm.png", disparity_SGBM)
+    # stereo = cv2.StereoBM_create(numDisparities=0, blockSize=7)
+    # disparity = stereo.compute(stereo_img.left_img, stereo_img.right_img)
+    # # norm = cv2.normalize(disparity, None, alpha = 0, beta = 1, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_32F)
+    # plt.imshow(disparity, 'gray')
+    # plt.show()
 
     #
     # stereo = cv2.StereoBM_create(numDisparities=16, blockSize=5)
@@ -259,7 +293,7 @@ def main(argv):
     print("----------------------------------")
     print("Matching both images to get a disparity map")
     print("----------------------------------")
-    # image_matching(stereo_img)
+    image_matching(stereo_img_rect)
 
     # To implement...
     print("----------------------------------")
