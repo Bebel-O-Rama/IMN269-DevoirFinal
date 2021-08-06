@@ -1,3 +1,7 @@
+#  Nicolas Auclair-Labbé - aucn2303
+#  Ala Antabli - anta2801
+
+
 # import collections
 import cv2
 import numpy as np
@@ -183,12 +187,12 @@ def calibrate_stereo_cam(stereo_img, is_debugging):
     mean_error_left = 0
     mean_error_right = 0
     for i in range(len(obj_points)):
-        imgpoints2, _ = cv2.projectPoints(obj_points[i], rvecs_l[i], tvecs_l[i], mtx_l, 0)
+        imgpoints2, _ = cv2.projectPoints(obj_points[i], rvecs_l[i], tvecs_l[i], mtx_l, dist_l)
         error = cv2.norm(img_points_l[i], imgpoints2, cv2.NORM_L2) / len(imgpoints2)
         mean_error_left += error
     print("total projection error (left): {}".format(mean_error_left / len(obj_points)))
     for i in range(len(obj_points)):
-        imgpoints2, _ = cv2.projectPoints(obj_points[i], rvecs_r[i], tvecs_r[i], mtx_r, 0)
+        imgpoints2, _ = cv2.projectPoints(obj_points[i], rvecs_r[i], tvecs_r[i], mtx_r, dist_r)
         error = cv2.norm(img_points_r[i], imgpoints2, cv2.NORM_L2) / len(imgpoints2)
         mean_error_right += error
     print("total projection error (right): {}".format(mean_error_right / len(obj_points)))
@@ -207,14 +211,14 @@ def image_matching(stereo_img_rect):
 
     # ALLER VOIR ÇA : http: // amroamroamro.github.io / mexopencv / opencv_contrib / disparity_filtering_demo.html
 
-    block_size = 5
+    block_size = 15
     min_disp = 0
-    max_disp = 64
+    max_disp = 208
     num_disp = max_disp - min_disp
-    uniquenessRatio = 15
-    speckleWindowSize = 50
-    speckleRange = 2
-    disp12MaxDiff = 1
+    uniquenessRatio = 0
+    speckleWindowSize = 20000
+    speckleRange = 10000
+    disp12MaxDiff = 40
 
     stereo = cv2.StereoSGBM_create(
         minDisparity=min_disp,
@@ -226,36 +230,17 @@ def image_matching(stereo_img_rect):
         disp12MaxDiff=disp12MaxDiff,
         P1=8 * 1 * block_size * block_size,
         P2=32 * 1 * block_size * block_size,
-        # P1=216,
-        # P2=864,
     )
 
-    stereo_bm = cv2.StereoBM_create()
-
     disparity_SGBM = stereo.compute(stereo_img_rect.left_img, stereo_img_rect.right_img)
+    disparity_SGBM = cv2.normalize(disparity_SGBM, disparity_SGBM, alpha=255,
+                                  beta=0, norm_type=cv2.NORM_MINMAX)
 
-    # disparity_SGBM = cv2.normalize(disparity_SGBM, disparity_SGBM, alpha=255,
-    #                               beta=0, norm_type=cv2.NORM_MINMAX)
     disparity_SGBM = np.uint8(disparity_SGBM)
-    cv2.imshow("Disparity", disparity_SGBM)
+
+    cv2.imshow("Disparity SGBM", disparity_SGBM)
     cv2.waitKey(0)
-    cv2.imwrite("disparity_SGBM_norm.png", disparity_SGBM)
-    # stereo = cv2.StereoBM_create(numDisparities=0, blockSize=7)
-    # disparity = stereo.compute(stereo_img.left_img, stereo_img.right_img)
-    # # norm = cv2.normalize(disparity, None, alpha = 0, beta = 1, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_32F)
-    # plt.imshow(disparity, 'gray')
-    # plt.show()
-
-    #
-    # stereo = cv2.StereoBM_create(numDisparities=16, blockSize=5)
-    # disparity = stereo.compute(stereo_img.left_img, stereo_img.right_img)
-    #
-    # cv2.imshow('disparity', disparity)
-    # cv2.waitKey(0)
-    # cv2.destroyAllWindows()
-
-    # Returns a 2D matrix with the disparities for each pixel
-
+    return disparity_SGBM
 
 # Fill a 2D matrix with the coordinates of each pixel. The method should return the error coefficient found between
 # the two images and a way to see the data (either by creating an image using the coordinates or by printing some
@@ -305,10 +290,11 @@ def main(argv):
     # debug_print_lr(stereo_img_rect)
 
     # Proceeds to the matching of the left and right images and returns a 2D matrix with the disparity for each pixels
+    # Returns the disparity map
     print("----------------------------------")
     print("Matching both images to get a disparity map")
     print("----------------------------------")
-    image_matching(stereo_img_rect)
+    disparity_map = image_matching(stereo_img_rect)
 
     # To implement...
     print("----------------------------------")
