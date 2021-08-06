@@ -9,6 +9,7 @@ import sys
 from matplotlib import pyplot as plt
 from typing import NamedTuple
 import os.path
+import open3d as o3d
 
 
 # Basic data structure to keep both images from a stereo capture
@@ -301,7 +302,15 @@ def debug_print_lr(stereo_img):
     cv2.waitKey(0)
     cv2.destroyAllWindows()
 
-
+def plot_3d_point(argv):
+    print("Load a ply point cloud, print it, and render it")
+    pcd = o3d.io.read_point_cloud(argv[0])
+    print(pcd)
+    print(np.asarray(pcd.points))
+    o3d.visualization.draw_geometries([pcd])
+    print("Paint chair")
+    
+    
 # Main method, everything starts and ends here!
 def main(argv):
     # If the number of parameters is > 2, exit the process
@@ -347,6 +356,9 @@ def main(argv):
     print("Creating a 3D render of the stereo capture")
     print("----------------------------------")
     depth_rendering(stereo_img_rect, Q, disparity_map)
+    
+    #display 3D points
+    plot_3d_point(['reconstructed.ply'])
 
 
 if __name__ == "__main__":
