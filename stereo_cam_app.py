@@ -207,10 +207,7 @@ def calibrate_stereo_cam(stereo_img, is_debugging):
 
 # Do the matching between the images
 def image_matching(stereo_img_rect):
-
-
-    # ALLER VOIR ÇA : http: // amroamroamro.github.io / mexopencv / opencv_contrib / disparity_filtering_demo.html
-
+    # Variables used to do the matching on the image 'Img/nico2.jpg'
     block_size = 15
     min_disp = 0
     max_disp = 208
@@ -220,6 +217,7 @@ def image_matching(stereo_img_rect):
     speckleRange = 10000
     disp12MaxDiff = 40
 
+    # Create the map used to evaluate the disparity of the stereo capture
     stereo = cv2.StereoSGBM_create(
         minDisparity=min_disp,
         numDisparities=num_disp,
@@ -232,14 +230,14 @@ def image_matching(stereo_img_rect):
         P2=32 * 1 * block_size * block_size,
     )
 
+    # Apply the map on the stereo images and normalize them to show better results
     disparity_SGBM = stereo.compute(stereo_img_rect.left_img, stereo_img_rect.right_img)
     disparity_SGBM = cv2.normalize(disparity_SGBM, disparity_SGBM, alpha=255,
                                   beta=0, norm_type=cv2.NORM_MINMAX)
 
     disparity_SGBM = np.uint8(disparity_SGBM)
 
-    cv2.imshow("Disparity SGBM", disparity_SGBM)
-    cv2.waitKey(0)
+    # Return the disparity map to be used in the 3D rendering step
     return disparity_SGBM
 
 # Fill a 2D matrix with the coordinates of each pixel. The method should return the error coefficient found between
