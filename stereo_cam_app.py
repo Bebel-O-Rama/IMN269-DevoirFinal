@@ -68,8 +68,8 @@ def calibrate_stereo_cam(stereo_img, is_debugging):
 
     # Arrays to store object points and image points from all the images.
     obj_points = []  # 3d point in real world space for left camera
-    imgpointsL = []  # 2d points in the left image plane.
-    imgpointsR = []  # 2d points in right image plane.
+    img_points_l = []  # 2d points in the left image plane.
+    img_points_r = []  # 2d points in right image plane.
 
     # Gets the mire in the folder 'Img/Calibration
     mire_left = []
@@ -90,9 +90,9 @@ def calibrate_stereo_cam(stereo_img, is_debugging):
         if ret_l and ret_r:
             obj_points.append(objp)
             corners_left = cv2.cornerSubPix(img_L, corners_left, (11, 11), (-1, -1), criteria)
-            imgpointsL.append(corners_left)
+            img_points_l.append(corners_left)
             corners_right = cv2.cornerSubPix(img_R, corners_right, (11, 11), (-1, -1), criteria)
-            imgpointsR.append(corners_right)
+            img_points_r.append(corners_right)
             # Draw and display the corners if the option has be set to true
             if is_debugging:
                 cv2.drawChessboardCorners(img_L, chessboard_size, corners_left, ret_l)
@@ -103,8 +103,8 @@ def calibrate_stereo_cam(stereo_img, is_debugging):
 
     print("Get the calibration parameters for both cameras")
     # Get the calibration parameters for both cameras
-    ret_l, mtx_l, dist_l, rvecs_l, tvecs_l = cv2.calibrateCamera(obj_points, imgpointsL, img_size, None, None)
-    ret_r, mtx_r, dist_r, rvecs_r, tvecs_r = cv2.calibrateCamera(obj_points, imgpointsR, img_size, None, None)
+    ret_l, mtx_l, dist_l, rvecs_l, tvecs_l = cv2.calibrateCamera(obj_points, img_points_l, img_size, None, None)
+    ret_r, mtx_r, dist_r, rvecs_r, tvecs_r = cv2.calibrateCamera(obj_points, img_points_r, img_size, None, None)
 
     print("-------------------------------")
     print("calibrateCamera (left):")
@@ -131,7 +131,7 @@ def calibrate_stereo_cam(stereo_img, is_debugging):
     criteria_stereo = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
 
     ret_stereo, new_mtx_l, dist_l, new_mtx_r, dist_r, rot, trans, essential_mtx, fundamental_mtx = cv2.stereoCalibrate(
-        obj_points, imgpointsL, imgpointsR,
+        obj_points, img_points_l, img_points_r,
         new_left_matrix, 0, new_right_matrix,
         0, img_size,
         criteria_stereo, flags)
@@ -180,6 +180,19 @@ def calibrate_stereo_cam(stereo_img, is_debugging):
 
     calibrated_img = StereoImg(fixed_left_img, fixed_right_img)
 
+    mean_error_left = 0
+    mean_error_right = 0
+    for i in range(len(obj_points)):
+        imgpoints2, _ = cv2.projectPoints(obj_points[i], rvecs_l[i], tvecs_l[i], mtx_l, 0)
+        error = cv2.norm(img_points_l[i], imgpoints2, cv2.NORM_L2) / len(imgpoints2)
+        mean_error_left += error
+    print("total projection error (left): {}".format(mean_error_left / len(obj_points)))
+    for i in range(len(obj_points)):
+        imgpoints2, _ = cv2.projectPoints(obj_points[i], rvecs_r[i], tvecs_r[i], mtx_r, 0)
+        error = cv2.norm(img_points_r[i], imgpoints2, cv2.NORM_L2) / len(imgpoints2)
+        mean_error_right += error
+    print("total projection error (right): {}".format(mean_error_right / len(obj_points)))
+
     if is_debugging:
         cv2.imshow('left img ', calibrated_img.left_img)
         cv2.imshow('right img ', calibrated_img.right_img)
@@ -194,14 +207,14 @@ def image_matching(stereo_img_rect):
 
     # ALLER VOIR ÇA : http: // amroamroamro.github.io / mexopencv / opencv_contrib / disparity_filtering_demo.html
 
-    block_size = 3
-    min_disp = 50
-    max_disp = 300
+    block_size = 5
+    min_disp = 0
+    max_disp = 64
     num_disp = max_disp - min_disp
-    uniquenessRatio = 5
+    uniquenessRatio = 15
     speckleWindowSize = 50
     speckleRange = 2
-    disp12MaxDiff = 0
+    disp12MaxDiff = 1
 
     stereo = cv2.StereoSGBM_create(
         minDisparity=min_disp,
@@ -213,14 +226,16 @@ def image_matching(stereo_img_rect):
         disp12MaxDiff=disp12MaxDiff,
         P1=8 * 1 * block_size * block_size,
         P2=32 * 1 * block_size * block_size,
-        # P1=20,
-        # P2=100,
+        # P1=216,
+        # P2=864,
     )
+
+    stereo_bm = cv2.StereoBM_create()
 
     disparity_SGBM = stereo.compute(stereo_img_rect.left_img, stereo_img_rect.right_img)
 
-    disparity_SGBM = cv2.normalize(disparity_SGBM, disparity_SGBM, alpha=255,
-                                  beta=0, norm_type=cv2.NORM_MINMAX)
+    # disparity_SGBM = cv2.normalize(disparity_SGBM, disparity_SGBM, alpha=255,
+    #                               beta=0, norm_type=cv2.NORM_MINMAX)
     disparity_SGBM = np.uint8(disparity_SGBM)
     cv2.imshow("Disparity", disparity_SGBM)
     cv2.waitKey(0)
