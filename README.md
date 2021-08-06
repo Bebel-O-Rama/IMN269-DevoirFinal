@@ -10,6 +10,7 @@ Ce document contient les informations relatives à l'exécution du programme ain
 - Numpy: 1.21.1
 - Opencv-Python: 4.5.3.56
 - Matplotlib: 3.4.2
+- Open3d: 0.13.0
 
 ## Exécution du programme
 Pour exécuter le programme avec Windows, il faut avoir un terminal d'ouvert à la position du projet (donc dans le dossier IMN269-DevoirFinal) et y entrer une des deux commandes suivantes : 

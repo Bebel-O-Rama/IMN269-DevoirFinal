@@ -6,10 +6,9 @@
 import cv2
 import numpy as np
 import sys
-from matplotlib import pyplot as plt
 from typing import NamedTuple
 import os.path
-
+import open3d
 
 # Basic data structure to keep both images from a stereo capture
 class StereoImg(NamedTuple):
@@ -18,7 +17,9 @@ class StereoImg(NamedTuple):
 
 
 # Get the StereoImg using the path passed as parameters
-def get_stereo_img(argv):
+def get_stereo_img(argv, isGray):
+    # We check if we want to parse only with grayscale or with colors
+    color_code = cv2.COLOR_BGR2BGRA if not isGray else cv2.COLOR_BGR2GRAY
     # We start by checking if the paths are pointing to some valid files.
     if not os.path.isfile(argv[0]):
         print("The path : ", argv[0], " doesn't point to a valid file.")
@@ -30,23 +31,30 @@ def get_stereo_img(argv):
     # If there's only one path, we assume both images are together and we split them in a left and right image.
     if len(argv) == 1:
         merged_img = cv2.imread(argv[0])
-        grayed_merged_img = cv2.cvtColor(merged_img, cv2.COLOR_BGR2GRAY)
+        grayed_merged_img = cv2.cvtColor(merged_img, color_code)
         # Checks if the image has been read correctly
         if merged_img is None:
             print("Something went wrong and the image at the path : ", argv[0], " couldn't be read.")
             sys.exit()
-        merged_h, merged_w = grayed_merged_img.shape
 
-        width_cutoff = merged_w // 2
-        grayed_img_l = grayed_merged_img[:, :width_cutoff]
-        grayed_img_r = grayed_merged_img[:, width_cutoff:]
+
+        if isGray:
+            merged_h, merged_w = grayed_merged_img.shape
+            width_cutoff = merged_w // 2
+            grayed_img_l = grayed_merged_img[:, :width_cutoff]
+            grayed_img_r = grayed_merged_img[:, width_cutoff:]
+        else:
+            merged_h, merged_w, color_channel = grayed_merged_img.shape
+            width_cutoff = merged_w // 2
+            grayed_img_l = grayed_merged_img[:, :width_cutoff]
+            grayed_img_r = grayed_merged_img[:, width_cutoff:]
 
     # Otherwise, we just have to read both images
     else:
         img_left = cv2.imread(argv[0])
         img_right = cv2.imread(argv[1])
-        grayed_img_l = cv2.cvtColor(img_left, cv2.COLOR_BGR2GRAY)
-        grayed_img_r = cv2.cvtColor(img_right, cv2.COLOR_BGR2GRAY)
+        grayed_img_l = cv2.cvtColor(img_left, color_code)
+        grayed_img_r = cv2.cvtColor(img_right, color_code)
         # Checks if both images have been read correctly
         if img_left is None:
             print("Something went wrong and the image at the path : ", argv[0], " couldn't be read.")
@@ -60,7 +68,7 @@ def get_stereo_img(argv):
     return images
 
 
-def calibrate_stereo_cam(stereo_img, is_debugging):
+def calibrate_stereo_cam(stereo_img, stereo_img_color, is_debugging):
     # Constant used in the method
     criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
     img_size = [1280, 960]
@@ -82,7 +90,7 @@ def calibrate_stereo_cam(stereo_img, is_debugging):
     # Read and parse the mire into a left and right array
     print("Fetch the chessboard patterns in 'Img/Calibration/'")
     for i in range(1, 22):
-        mire_full = get_stereo_img(['Img/Calibration/mire' + str(i) + '.jpg'])
+        mire_full = get_stereo_img(['Img/Calibration/mire' + str(i) + '.jpg'], True)
         mire_left.append(mire_full.left_img)
         mire_right.append(mire_full.right_img)
 
@@ -115,16 +123,15 @@ def calibrate_stereo_cam(stereo_img, is_debugging):
     print('return value (left)\n', ret_l)
     print('matrix (left)\n', mtx_l)
     print('distortion (left)\n', dist_l)
-    print('rotation vector (left)\n', rvecs_l)
-    print('translation vector (left)\n', tvecs_l)
+    # print('rotation vector (left)\n', rvecs_l)
+    # print('translation vector (left)\n', tvecs_l)
 
     print("-------------------------------")
     print("calibrateCamera (right):")
     print('return value (right)\n', ret_r)
     print('matrix (right)\n', mtx_r)
     print('distortion (right)\n', dist_r)
-    print('rotation vector (right)\n', rvecs_r)
-    print('translation vector (right)\n', tvecs_r)
+
 
     new_left_matrix, roi_L = cv2.getOptimalNewCameraMatrix(mtx_l, 0, img_size, 1, img_size)
     new_right_matrix, roi_R = cv2.getOptimalNewCameraMatrix(mtx_r, 0, img_size, 1, img_size)
@@ -174,15 +181,19 @@ def calibrate_stereo_cam(stereo_img, is_debugging):
     fixed_right_img = cv2.remap(stereo_img.right_img, stereo_map_r[0], stereo_map_r[1], cv2.INTER_LANCZOS4)
 
     # Resize the images to fit the new region of interest. Also put both images to the same size
+    # We also want to resize the color images to use later for the 3D rendering
     x = roi_l[0] if roi_l[0] > roi_r[0] else roi_r[0]
     y = roi_l[1] if roi_l[1] > roi_r[1] else roi_r[1]
     w = roi_l[2] + roi_l[0] if roi_l[2] + roi_l[0] < roi_r[2] + roi_r[0] else roi_r[2] + roi_r[0]
     h = roi_l[3] + roi_l[1] if roi_l[3] + roi_l[1] < roi_r[3] + roi_r[1] else roi_r[3] + roi_r[1]
 
+    roi_left_stereo_img = stereo_img_color.left_img[y:h, x:w]
+    roi_right_stereo_img = stereo_img_color.right_img[y:h, x:w]
     fixed_left_img = fixed_left_img[y:h, x:w]
     fixed_right_img = fixed_right_img[y:h, x:w]
 
     calibrated_img = StereoImg(fixed_left_img, fixed_right_img)
+    roi_stereo_col = StereoImg(roi_left_stereo_img, roi_right_stereo_img)
 
     mean_error_left = 0
     mean_error_right = 0
@@ -202,7 +213,7 @@ def calibrate_stereo_cam(stereo_img, is_debugging):
         cv2.imshow('right img ', calibrated_img.right_img)
         cv2.waitKey(0)
 
-    return calibrated_img, Q
+    return calibrated_img, Q, roi_stereo_col
 
 
 # Do the matching between the images
@@ -243,10 +254,53 @@ def image_matching(stereo_img_rect):
 # Fill a 2D matrix with the coordinates of each pixel. The method should return the error coefficient found between
 # the two images and a way to see the data (either by creating an image using the coordinates or by printing some
 # kind of graph)
-def depth_rendering(disparity_map):
-    print("No yet implemented")
-    # Returns a 2D matrix with the coordinates of each pixel in the scene
+def depth_rendering(disparity_map, roi_stereo_color, Q):
 
+    h, w = roi_stereo_color.left_img.shape[:2]
+    focal_length = 12
+    # Should use focal length (testing things for now)
+    # Q = np.float32([[1, 0, 0, -w / 2.0],
+    #                 [0, -1, 0, h / 2.0],
+    #                 [0, 0, 0, -focal_length],
+    #                 [0, 0, 1, 0]])
+
+    Q = np.float32([[1, 0, 0, 0],
+                     [0, -1, 0, 0],
+                     [0, 0, focal_length * 0.20, 0],  # Focal length multiplication obtained experimentally.
+                     [0, 0, 0, 1]])
+
+    points_3D = cv2.reprojectImageTo3D(disparity_map, Q)
+
+    mask_map = disparity_map > disparity_map.min()
+
+    colors = cv2.cvtColor(roi_stereo_color.left_img, cv2.COLOR_BGR2RGB)
+
+    output_points = points_3D[mask_map]
+    output_colors = colors[mask_map]
+    output_file = 'reconstructed.ply'
+
+    output_colors = output_colors.reshape(-1, 3)
+    output_points = np.hstack([output_points.reshape(-1, 3), output_colors])
+
+    ply_header = '''ply
+    		format ascii 1.0
+    		element vertex %(vert_num)d
+    		property float x
+    		property float y
+    		property float z
+    		property uchar red
+    		property uchar green
+    		property uchar blue
+    		end_header
+    		'''
+    with open(output_file, 'w') as f:
+        f.write(ply_header % dict(vert_num=len(output_points)))
+        np.savetxt(f, output_points, '%f %f %f %d %d %d')
+
+    cloud = open3d.io.read_point_cloud("reconstructed.ply")  # Read the point cloud
+    open3d.visualization.draw_geometries([cloud])  # Visualize the point cloud
+
+    # print(disparity_map.shape)
 
 # Debugging method used to show the content of a StereoImg
 def debug_print_lr(stereo_img):
@@ -271,21 +325,21 @@ def main(argv):
     print("----------------------------------")
     print("Getting the stereo images to process")
     print("----------------------------------")
-    stereo_img = get_stereo_img(argv)
-
+    stereo_img = get_stereo_img(argv, True)
+    stereo_img_color = get_stereo_img(argv, False)
     # Debugging method used to print both left and right images.
     # debug_print_lr(stereo_img)
 
     # Calibrate the images using the mire found in the folder Img/Calibration/.
     # The second parameter is a bool to determine if the process shows the corner of the chessboard pattern or not
-    # Returns the calibrated images and the Q matrix for the 3D rendering
+    # Returns the calibrated images, the Q matrix for the 3D rendering and a resized color stereo set also for 3D rendering
     print("----------------------------------")
     print("Calibrating the images")
     print("----------------------------------")
-    stereo_img_rect, Q = calibrate_stereo_cam(stereo_img, False)
+    stereo_img_rect, Q, roi_stereo_color = calibrate_stereo_cam(stereo_img, stereo_img_color, False)
 
     # Debugging method used to print both left and right images rectified
-    # debug_print_lr(stereo_img_rect)
+    # debug_print_lr(roi_stereo_color)
 
     # Proceeds to the matching of the left and right images and returns a 2D matrix with the disparity for each pixels
     # Returns the disparity map
@@ -302,7 +356,7 @@ def main(argv):
     print("----------------------------------")
     print("Creating a 3D render of the stereo capture")
     print("----------------------------------")
-    depth_rendering(disparity_map)
+    depth_rendering(disparity_map, roi_stereo_color, Q)
 
 
 if __name__ == "__main__":
