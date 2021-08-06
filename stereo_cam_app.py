@@ -102,34 +102,34 @@ def calibrate_stereo_cam(stereo_img, is_debugging):
 
     print("Get the calibration parameters for both cameras")
     # Get the calibration parameters for both cameras
-    retL, mtxL, distL, rvecsL, tvecsL = cv2.calibrateCamera(obj_points, imgpointsL, img_size, None, None)
-    retR, mtxR, distR, rvecsR, tvecsR = cv2.calibrateCamera(obj_points, imgpointsR, img_size, None, None)
+    ret_l, mtx_l, dist_l, rvecs_l, tvecs_l = cv2.calibrateCamera(obj_points, imgpointsL, img_size, None, None)
+    ret_r, mtx_r, dist_r, rvecs_r, tvecs_r = cv2.calibrateCamera(obj_points, imgpointsR, img_size, None, None)
 
     print("-------------------------------")
     print("calibrateCamera (left):")
-    print('return value (left)\n', retL)
-    print('matrix (left)\n', mtxL)
-    print('distortion (left)\n', distL)
-    print('rotation vector (left)\n', rvecsL)
-    print('translation vector (left)\n', tvecsL)
+    print('return value (left)\n', ret_l)
+    print('matrix (left)\n', mtx_l)
+    print('distortion (left)\n', dist_l)
+    print('rotation vector (left)\n', rvecs_l)
+    print('translation vector (left)\n', tvecs_l)
 
     print("-------------------------------")
     print("calibrateCamera (right):")
-    print('return value (right)\n', retR)
-    print('matrix (right)\n', mtxR)
-    print('distortion (right)\n', distR)
-    print('rotation vector (right)\n', rvecsR)
-    print('translation vector (right)\n', tvecsR)
+    print('return value (right)\n', ret_r)
+    print('matrix (right)\n', mtx_r)
+    print('distortion (right)\n', dist_r)
+    print('rotation vector (right)\n', rvecs_r)
+    print('translation vector (right)\n', tvecs_r)
 
-    new_left_matrix, roi_L = cv2.getOptimalNewCameraMatrix(mtxL, 0, img_size, 1, img_size)
-    new_right_matrix, roi_R = cv2.getOptimalNewCameraMatrix(mtxR, 0, img_size, 1, img_size)
+    new_left_matrix, roi_L = cv2.getOptimalNewCameraMatrix(mtx_l, 0, img_size, 1, img_size)
+    new_right_matrix, roi_R = cv2.getOptimalNewCameraMatrix(mtx_r, 0, img_size, 1, img_size)
 
     # Perform the stereo calibration with the intrinsic parameters
     flags = 0
     flags |= cv2.CALIB_FIX_INTRINSIC
     criteria_stereo = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
 
-    retStereo, new_mtxL, distL, new_mtxR, distR, rot, trans, essentialMtx, fundamentalMtx = cv2.stereoCalibrate(
+    ret_stereo, new_mtx_l, dist_l, new_mtx_r, dist_r, rot, trans, essential_mtx, fundamental_mtx = cv2.stereoCalibrate(
         obj_points, imgpointsL, imgpointsR,
         new_left_matrix, 0, new_right_matrix,
         0, img_size,
@@ -137,18 +137,18 @@ def calibrate_stereo_cam(stereo_img, is_debugging):
 
     print("-------------------------------")
     print("stereoCalibrate :")
-    print('return value\n', retStereo)
-    print('new left matrix\n', new_mtxL)
-    print('new right matrix\n', new_mtxR)
-    print('distortion (left)\n', distL)
-    print('distortion (right)\n', distR)
+    print('return value\n', ret_stereo)
+    print('new left matrix\n', new_mtx_l)
+    print('new right matrix\n', new_mtx_r)
+    print('distortion (left)\n', dist_l)
+    print('distortion (right)\n', dist_r)
     print('Rotation\n', rot)
     print('Translation\n', trans)
-    print('Essential matrix: \n', essentialMtx)
-    print('Fundamental matrix: \n', fundamentalMtx)
+    print('Essential matrix: \n', essential_mtx)
+    print('Fundamental matrix: \n', fundamental_mtx)
 
     rectify_scale = 1
-    rect_l, rect_r, proj_mat_l, proj_mat_r, Q, roiL, roiR = cv2.stereoRectify(new_mtxL, 0, new_mtxR, 0,
+    rect_l, rect_r, proj_mat_l, proj_mat_r, Q, roi_l, roi_r = cv2.stereoRectify(new_mtx_l, 0, new_mtx_r, 0,
                                                                               img_size, rot, trans,
                                                                               rectify_scale, (0, 0))
     print("-------------------------------")
@@ -158,21 +158,21 @@ def calibrate_stereo_cam(stereo_img, is_debugging):
     print('projection matrix (left)\n', proj_mat_l)
     print('projection matrix (right)\n', proj_mat_r)
     print('Q\n', Q)
-    print('ROI (left)\n', roiL)
-    print('ROI (right)\n', roiR)
+    print('ROI (left)\n', roi_l)
+    print('ROI (right)\n', roi_r)
 
-    stereoMapL = cv2.initUndistortRectifyMap(new_mtxL, 0, rect_l, proj_mat_l, img_size, cv2.CV_16SC2)
-    stereoMapR = cv2.initUndistortRectifyMap(new_mtxR, 0, rect_r, proj_mat_r, img_size, cv2.CV_16SC2)
+    stereo_map_l = cv2.initUndistortRectifyMap(new_mtx_l, 0, rect_l, proj_mat_l, img_size, cv2.CV_16SC2)
+    stereo_map_r = cv2.initUndistortRectifyMap(new_mtx_r, 0, rect_r, proj_mat_r, img_size, cv2.CV_16SC2)
 
     # Calibrate the images using the all the calibration data
-    fixed_left_img = cv2.remap(stereo_img.left_img, stereoMapL[0], stereoMapL[1], cv2.INTER_LANCZOS4)
-    fixed_right_img = cv2.remap(stereo_img.right_img, stereoMapR[0], stereoMapR[1], cv2.INTER_LANCZOS4)
+    fixed_left_img = cv2.remap(stereo_img.left_img, stereo_map_l[0], stereo_map_l[1], cv2.INTER_LANCZOS4)
+    fixed_right_img = cv2.remap(stereo_img.right_img, stereo_map_r[0], stereo_map_r[1], cv2.INTER_LANCZOS4)
 
     # Resize the images to fit the new region of interest. Also put both images to the same size
-    x = roiL[0] if roiL[0] > roiR[0] else roiR[0]
-    y = roiL[1] if roiL[1] > roiR[1] else roiR[1]
-    w = roiL[2] + roiL[0] if roiL[2] + roiL[0] < roiR[2] + roiR[0] else roiR[2] + roiR[0]
-    h = roiL[3] + roiL[1] if roiL[3] + roiR[0] < roiR[3] + roiR[0] else roiR[3] + roiR[1]
+    x = roi_l[0] if roi_l[0] > roi_r[0] else roi_r[0]
+    y = roi_l[1] if roi_l[1] > roi_r[1] else roi_r[1]
+    w = roi_l[2] + roi_l[0] if roi_l[2] + roi_l[0] < roi_r[2] + roi_r[0] else roi_r[2] + roi_r[0]
+    h = roi_l[3] + roi_l[1] if roi_l[3] + roi_l[1] < roi_r[3] + roi_r[1] else roi_r[3] + roi_r[1]
 
     fixed_left_img = fixed_left_img[y:h, x:w]
     fixed_right_img = fixed_right_img[y:h, x:w]
