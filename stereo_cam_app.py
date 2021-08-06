@@ -243,7 +243,7 @@ def image_matching(stereo_img_rect):
 # Fill a 2D matrix with the coordinates of each pixel. The method should return the error coefficient found between
 # the two images and a way to see the data (either by creating an image using the coordinates or by printing some
 # kind of graph)
-def depth_rendering():
+def depth_rendering(disparity_map):
     print("No yet implemented")
     # Returns a 2D matrix with the coordinates of each pixel in the scene
 
@@ -294,15 +294,15 @@ def main(argv):
     print("----------------------------------")
     disparity_map = image_matching(stereo_img_rect)
 
-    # Shows the disparity map returned from the method 'image_matching'
-    cv2.imshow('disparity_map', disparity_map)
-    cv2.waitKey(0)
+    # # Shows the disparity map returned from the method 'image_matching'
+    # cv2.imshow('disparity_map', disparity_map)
+    # cv2.waitKey(0)
 
-    # To implement...
+    # Creates a 3D render of the stereo capture using the disparity map of both images in the stereo capture
     print("----------------------------------")
     print("Creating a 3D render of the stereo capture")
     print("----------------------------------")
-    depth_rendering()
+    depth_rendering(disparity_map)
 
 
 if __name__ == "__main__":
