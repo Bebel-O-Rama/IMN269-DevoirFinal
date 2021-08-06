@@ -219,14 +219,14 @@ def calibrate_stereo_cam(stereo_img, stereo_img_color, is_debugging):
 # Do the matching between the images
 def image_matching(stereo_img_rect):
     # Variables used to do the matching on the image 'Img/nico2.jpg'
-    block_size = 15
+    block_size = 13
     min_disp = 0
-    max_disp = 208
+    max_disp = 256
     num_disp = max_disp - min_disp
-    uniquenessRatio = 0
-    speckleWindowSize = 20000
-    speckleRange = 10000
-    disp12MaxDiff = 40
+    uniquenessRatio = 1
+    speckleWindowSize = 1000
+    speckleRange = 50
+    disp12MaxDiff = 10
 
     # Create the map used to evaluate the disparity of the stereo capture
     stereo = cv2.StereoSGBM_create(
@@ -266,7 +266,7 @@ def depth_rendering(disparity_map, roi_stereo_color, Q):
 
     Q = np.float32([[1, 0, 0, 0],
                      [0, -1, 0, 0],
-                     [0, 0, focal_length * 0.20, 0],  # Focal length multiplication obtained experimentally.
+                     [0, 0, focal_length * 0.25, 0],  # Focal length multiplication obtained experimentally.
                      [0, 0, 0, 1]])
 
     points_3D = cv2.reprojectImageTo3D(disparity_map, Q)
