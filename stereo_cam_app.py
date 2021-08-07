@@ -19,7 +19,7 @@ class StereoImg(NamedTuple):
 # Get the StereoImg using the path passed as parameters
 def get_stereo_img(argv, isGray):
     # We check if we want to parse only with grayscale or with colors
-    color_code = cv2.COLOR_BGR2BGRA if not isGray else cv2.COLOR_BGR2GRAY
+    color_code = cv2.COLOR_BGR2GRAY if isGray else cv2.COLOR_BGR2RGB
     # We start by checking if the paths are pointing to some valid files.
     if not os.path.isfile(argv[0]):
         print("The path : ", argv[0], " doesn't point to a valid file.")
@@ -213,7 +213,7 @@ def calibrate_stereo_cam(stereo_img, stereo_img_color, is_debugging):
         cv2.imshow('right img ', calibrated_img.right_img)
         cv2.waitKey(0)
 
-    return calibrated_img, Q, roi_stereo_col
+    return calibrated_img, trans, roi_stereo_col
 
 
 # Do the matching between the images
@@ -254,30 +254,46 @@ def image_matching(stereo_img_rect):
 # Fill a 2D matrix with the coordinates of each pixel. The method should return the error coefficient found between
 # the two images and a way to see the data (either by creating an image using the coordinates or by printing some
 # kind of graph)
-def depth_rendering(disparity_map, roi_stereo_color, Q):
+def depth_rendering(disparity_map, roi_stereo_color, translation):
 
     h, w = roi_stereo_color.left_img.shape[:2]
     focal_length = 12
-    # Should use focal length (testing things for now)
-    # Q = np.float32([[1, 0, 0, -w / 2.0],
-    #                 [0, -1, 0, h / 2.0],
-    #                 [0, 0, 0, -focal_length],
-    #                 [0, 0, 1, 0]])
+    distance_stereo_cam = np.linalg.norm(translation)
+
+    ratio_for_Z = distance_stereo_cam/focal_length
+
+
 
     Q = np.float32([[1, 0, 0, 0],
                      [0, -1, 0, 0],
-                     [0, 0, focal_length * 0.25, 0],  # Focal length multiplication obtained experimentally.
+                     [0, 0, distance_stereo_cam/focal_length, 0],
                      [0, 0, 0, 1]])
 
-    points_3D = cv2.reprojectImageTo3D(disparity_map, Q)
+    # points_3D = cv2.reprojectImageTo3D(disparity_map, Q)
 
+    points_3D = np.zeros((h, w, 3), dtype=float)
+
+    for i in range(0, h-1):
+        for j in range(0, w-1):
+            points_3D[i][j] = [j, -i, disparity_map[i][j] * ratio_for_Z]
+
+    # points_3D = disparity_map
+
+    # for i in disparity_map:
+    #     for j in disparity_map[0]:
+    #         points_3D[i][j] = disparity_map[i][j] * distance_stereo_cam/focal_length
+
+    # It gets rid of any points without any disparities
     mask_map = disparity_map > disparity_map.min()
 
-    colors = cv2.cvtColor(roi_stereo_color.left_img, cv2.COLOR_BGR2RGB)
+    print("Convert into a cloud file (.ply), then loads it")
 
+    # Creates some variables to convert the 3D image into a cloud
+    colors = roi_stereo_color.left_img
+    output_file = 'reconstructed_nico2.ply'
+    # Uses the mask on the points and the colored image
     output_points = points_3D[mask_map]
     output_colors = colors[mask_map]
-    output_file = 'reconstructed.ply'
 
     output_colors = output_colors.reshape(-1, 3)
     output_points = np.hstack([output_points.reshape(-1, 3), output_colors])
@@ -293,14 +309,14 @@ def depth_rendering(disparity_map, roi_stereo_color, Q):
     		property uchar blue
     		end_header
     		'''
+    # Save the cloud
     with open(output_file, 'w') as f:
         f.write(ply_header % dict(vert_num=len(output_points)))
         np.savetxt(f, output_points, '%f %f %f %d %d %d')
-
-    cloud = open3d.io.read_point_cloud("reconstructed.ply")  # Read the point cloud
+    # Load the cloud to show to everyone
+    cloud = open3d.io.read_point_cloud("reconstructed_nico2.ply")  # Read the point cloud
     open3d.visualization.draw_geometries([cloud])  # Visualize the point cloud
 
-    # print(disparity_map.shape)
 
 # Debugging method used to show the content of a StereoImg
 def debug_print_lr(stereo_img):
@@ -332,11 +348,11 @@ def main(argv):
 
     # Calibrate the images using the mire found in the folder Img/Calibration/.
     # The second parameter is a bool to determine if the process shows the corner of the chessboard pattern or not
-    # Returns the calibrated images, the Q matrix for the 3D rendering and a resized color stereo set also for 3D rendering
+    # Returns the calibrated images, the translation vector (we want the difference between both camera) a resized color stereo set for 3D rendering
     print("----------------------------------")
     print("Calibrating the images")
     print("----------------------------------")
-    stereo_img_rect, Q, roi_stereo_color = calibrate_stereo_cam(stereo_img, stereo_img_color, False)
+    stereo_img_rect, translation, roi_stereo_color = calibrate_stereo_cam(stereo_img, stereo_img_color, False)
 
     # Debugging method used to print both left and right images rectified
     # debug_print_lr(roi_stereo_color)
@@ -356,8 +372,11 @@ def main(argv):
     print("----------------------------------")
     print("Creating a 3D render of the stereo capture")
     print("----------------------------------")
-    depth_rendering(disparity_map, roi_stereo_color, Q)
+    depth_rendering(disparity_map, roi_stereo_color, translation)
 
+    print("----------------------------------")
+    print("Exiting the program")
+    print("----------------------------------")
 
 if __name__ == "__main__":
     main(sys.argv[1:])
